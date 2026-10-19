@@ -41,16 +41,16 @@ BACKENDS = {
     "trocr": ocr_trocr,
 }
 
-def ocr(image_crop: np.ndarray, context: str | None = None) -> str:
+def ocr(image_crop: np.ndarray, context: str | None = None, backend: str | None = None) -> str:
     if image_crop.size == 0:
         return ""
-    backend = os.environ.get("OCR_BACKEND", "llm")
+    backend = backend or os.environ.get("OCR_BACKEND", "llm")
     if backend in ("llm", "trocr"):
         return BACKENDS[backend](image_crop, context)
     return BACKENDS[backend](image_crop)
 
-def workers() -> int:
-    backend = os.environ.get("OCR_BACKEND", "llm")
+def workers(backend: str | None = None) -> int:
+    backend = backend or os.environ.get("OCR_BACKEND", "llm")
     if backend == "llm":
         return max(1, int(os.environ.get("OCR_LLM_WORKERS", "4")))
     return 1

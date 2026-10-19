@@ -53,6 +53,7 @@ def get_field_locations(source: dict):
 async def process_document(
     source: dict,
     raw_bytes: bytes,
+    backend: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray, dict, dict]:
     scan_bytes = await asyncio.to_thread(scan, raw_bytes)
     scan_img = cv2.imdecode(np.frombuffer(scan_bytes, np.uint8), cv2.IMREAD_COLOR)
@@ -63,7 +64,7 @@ async def process_document(
     flat = warp_to_source(scan_img, source, target)
     checkboxWords, _textBoxes = get_field_locations(source)
     checkboxResults = classify_checkbox(source, flat, checkboxWords)
-    fields = await asyncio.to_thread(extract_fields, flat, source)
+    fields = await asyncio.to_thread(extract_fields, flat, source, backend)
     return flat, overlay(source, flat, checkboxResults), fields, checkboxResults
 
 _sources = {}
@@ -95,12 +96,12 @@ def pair_photos(paths) -> dict:
 
 # Runs each side present through process_document and scores the card. A missing side's items are not_scored.
 async def process_card(front_bytes: bytes | None = None, back_bytes: bytes | None = None,
-                       sources: dict | None = None) -> dict:
+                       sources: dict | None = None, backend: str | None = None) -> dict:
     sides, fields, checkboxes = {}, {}, {}
     for side, raw in (("front", front_bytes), ("back", back_bytes)):
         if raw is None:
             continue
-        flat, overlaid, side_fields, side_boxes = await process_document(get_source(side, sources), raw)
+        flat, overlaid, side_fields, side_boxes = await process_document(get_source(side, sources), raw, backend)
         sides[side] = {"aligned": flat, "overlay": overlaid, "fields": side_fields, "checkboxes": side_boxes}
         fields.update(side_fields)
         checkboxes.update(side_boxes)

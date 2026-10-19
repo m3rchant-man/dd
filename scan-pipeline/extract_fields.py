@@ -1,6 +1,7 @@
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+from itertools import repeat
 
 import cv2
 import numpy as np
@@ -41,13 +42,13 @@ def crop(image: np.ndarray, box: tuple) -> np.ndarray:
 
 # Takes aligned image and source JSON, returns extracted field dict.
 # Output keys are the field_key names from source.json
-def extract_fields(aligned_image: np.ndarray, source: dict) -> dict:
+def extract_fields(aligned_image: np.ndarray, source: dict, backend: str | None = None) -> dict:
     boxes = get_field_boxes(source)
     field_keys = list(boxes.keys())
     crops = [crop(aligned_image, boxes[field_key]) for field_key in field_keys]
 
-    with ThreadPoolExecutor(max_workers=workers()) as pool:
-        texts = pool.map(ocr, crops, field_keys)
+    with ThreadPoolExecutor(max_workers=workers(backend)) as pool:
+        texts = pool.map(ocr, crops, field_keys, repeat(backend))
 
     output = {}
     for field_key, text in zip(field_keys, texts):
